@@ -1,65 +1,88 @@
-#include <stdio.h> 
-#include <string.h> 
+#include <stdio.h> // Standard input/output functions
+#include <stdlib.h> // Standard library functions
+#include <string.h> // String manipulation functions
+#include <ctype.h> // Character type functions
+#include <math.h> // Math functions
 
-// Encrypt function (columnar transposition)
-void encrypt(char plain[], int key, char encrypted[]) {
-    int len = strlen(plain);            // Get length of the plaintext
-    int rows = (len + key - 1) / key;   // Calculate number of rows needed
-    int idx = 0;                         // Initialize index for encrypted text
-    for (int c = 0; c < key; c++) {     // Loop through each column
-        for (int r = 0; r < rows; r++) { // Loop through each row
-            int pos = r * key + c;       // Calculate position in plaintext
-            encrypted[idx++] = (pos < len) ? plain[pos] : 'X'; // Add character or pad with 'X'
-        }
-    encrypted[idx] = '\0'; // Null-terminate the encrypted string
+#define MAX 1000 // Maximum buffer size
+
+// Remove spaces and convert to uppercase
+void preprocess(char *s) {
+    int j = 0; // Index for the processed string
+    for (int i = 0; s[i]; i++) // Loop through each character in the input string
+        if (!isspace(s[i])) // If the character is not a space
+            s[j++] = toupper(s[i]); // Convert to uppercase and add to processed string
+    s[j] = '\0'; // Null-terminate the processed string
 }
 
-// Decrypt function (reverse columnar transposition)
-void decrypt(char cipher[], int key, char decrypted[]) {
-    int len = strlen(cipher);                       // Get length of the ciphertext
-    int rows = (len + key - 1) / key;           // Calculate number of rows
-    int idx = 0;                    // Initialize index for decrypted text
-    for (int r = 0; r < rows; r++)           // Loop through each row
-        for (int c = 0; c < key; c++) {          // Loop through each column
-            int pos = c * rows + r;             // Calculate position in ciphertext
-            if (pos < len)               // Check if position is within bounds
-                decrypted[idx++] = cipher[pos]; // Add character to decrypted text
-        }
-    // Remove trailing 'X'
-    while (idx > 0 && decrypted[idx - 1] == 'X') idx--; // Remove padding 'X' at the end
-    decrypted[idx] = '\0'; // Null-terminate the decrypted string
+// Encrypt plaintext using columnar transposition
+void encrypt(char *plain, int key, char *cipher) {
+    int len = strlen(plain); // Get length of plaintext
+    int rows = (int)ceil((double)len / key); // Calculate number of rows
+    int padded_len = rows * key; // Calculate padded length
+
+    // Pad with 'X' if needed
+    for (int i = len; i < padded_len; i++) // Loop from end of plaintext to padded length
+        plain[i] = 'X'; // Pad with 'X'
+    plain[padded_len] = '\0'; // Null-terminate the padded plaintext
+
+    int idx = 0; // Index for ciphertext
+    for (int col = 0; col < key; col++) // Loop through columns
+        for (int row = 0; row < rows; row++) // Loop through rows
+            cipher[idx++] = plain[row * key + col]; // Read column-wise and add to ciphertext
+    cipher[idx] = '\0'; // Null-terminate the ciphertext
 }
 
-// Main function
+// Decrypt ciphertext using reverse columnar transposition
+void decrypt(char *cipher, int key, char *plain) {
+    int len = strlen(cipher); // Get length of ciphertext
+    int rows = (int)ceil((double)len / key); // Calculate number of rows
+
+    int idx = 0; // Index for plaintext
+    for (int row = 0; row < rows; row++) // Loop through rows
+        for (int col = 0; col < key; col++) { // Loop through columns
+            int pos = col * rows + row; // Calculate position in ciphertext
+            if (pos < len) // If position is within bounds
+                plain[idx++] = cipher[pos]; // Add character to plaintext
+        }
+    // Remove padding
+    while (idx > 0 && plain[idx - 1] == 'X') // Remove trailing 'X' padding
+        idx--;
+    plain[idx] = '\0'; // Null-terminate the plaintext
+}
+
 int main() {
     int choice, key; // Variables for menu choice and key
-    char input[1000], output[1000]; // Buffers for input and output text
+    char text[MAX], result[MAX]; // Buffers for input and output
 
     printf("1. Encrypt\n2. Decrypt\n3. Exit\nChoose: "); // Print menu
     scanf("%d", &choice); // Read user choice
-    getchar(); // Remove newline from buffer
+    getchar(); // consume newline
 
     if (choice == 1) { // If user chooses encryption
-        printf("Enter key (number): "); // Prompt for key
+        printf("Key: "); // Prompt for key
         scanf("%d", &key); // Read key
-        getchar(); // Remove newline
-        printf("Enter text to encrypt: "); // Prompt for plaintext
-        fgets(input, sizeof(input), stdin); // Read plaintext
-        input[strcspn(input, "\n")] = '\0'; // Remove newline from input
+        getchar(); // Consume newline
 
-        encrypt(input, key, output); // Encrypt the plaintext
-        printf("Encrypted text: %s\n", output); // Print encrypted text
+        printf("Plaintext: "); // Prompt for plaintext
+        fgets(text, sizeof(text), stdin); // Read plaintext
+        text[strcspn(text, "\n")] = 0; // Remove newline character
+
+        preprocess(text); // Remove spaces and convert to uppercase
+        encrypt(text, key, result); // Encrypt the plaintext
+        printf("Encrypted: %s\n", result); // Print encrypted text
 
     } else if (choice == 2) { // If user chooses decryption
-        printf("Enter key (number): "); // Prompt for key
+        printf("Key: "); // Prompt for key
         scanf("%d", &key); // Read key
-        getchar(); // Remove newline
-        printf("Enter text to decrypt: "); // Prompt for ciphertext
-        fgets(input, sizeof(input), stdin); // Read ciphertext
-        input[strcspn(input, "\n")] = '\0'; // Remove newline from input
+        getchar(); // Consume newline
 
-        decrypt(input, key, output); // Decrypt the ciphertext
-        printf("Decrypted text: %s\n", output); // Print decrypted text
+        printf("Ciphertext: "); // Prompt for ciphertext
+        fgets(text, sizeof(text), stdin); // Read ciphertext
+        text[strcspn(text, "\n")] = 0; // Remove newline character
+
+        decrypt(text, key, result); // Decrypt the ciphertext
+        printf("Decrypted: %s\n", result); // Print decrypted text
 
     } else { // If user chooses to exit
         printf("Goodbye!\n"); // Print goodbye message
